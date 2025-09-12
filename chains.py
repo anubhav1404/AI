@@ -1,29 +1,27 @@
-from dotenv import load_dotenv
 import os
-
-load_dotenv()  # loads .env variables
-
-# Use the new BedrockLLM from langchain-aws
+from dotenv import load_dotenv
 from langchain_aws import ChatBedrock
-from langchain.chains import LLMChain, SimpleSequentialChain, SequentialChain
+from langchain.chains import LLMChain, SequentialChain
 from langchain.prompts import PromptTemplate
 
-# Bedrock LLM setup
+load_dotenv()
+
+# ----------------- Bedrock LLM Setup -----------------
 llm = ChatBedrock(
     model_id="anthropic.claude-3-haiku-20240307-v1:0",
-    region_name=os.getenv("AWS_DEFAULT_REGION"),  # MUST be AWS_DEFAULT_REGION
+    region_name=os.getenv("AWS_DEFAULT_REGION"),
     aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
     aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY")
 )
 
-# Story Chain
+# Story generation chain
 story_prompt = PromptTemplate(
     input_variables=["mood"],
     template="User mood: {mood}\nWrite a short, creative story reflecting this mood."
 )
 story_chain = LLMChain(llm=llm, prompt=story_prompt, output_key="story")
 
-# Activity Chain
+# Activity generation chain
 activity_prompt = PromptTemplate(
     input_variables=["mood"],
     template="User mood: {mood}\nSuggest 1-2 real-life activities matching this mood."
@@ -37,15 +35,5 @@ overall_chain = SequentialChain(
     output_variables=["story", "activity"],  # what you want as output
     verbose=True
 )
-
-
-
-
-
-
-
-
-
-
 
 
