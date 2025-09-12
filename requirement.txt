@@ -1,0 +1,7 @@
+streamlit
+langchain
+boto3
+python-dotenv
+spotipy
+sqlite-utils
+langchain-community
