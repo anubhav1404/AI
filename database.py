@@ -16,15 +16,17 @@ class MoodJournal(Base):
     mood_text = Column(String, nullable=False)
     story_theme = Column(String, nullable=False)
     activity_theme = Column(String, nullable=False)
+    music_summary = Column(String, nullable=True)   # <-- NEW COLUMN
 
 Base.metadata.create_all(engine)
 
-def insert_entry(mood_text, story_theme, activity_theme):
+def insert_entry(mood_text, story_theme, activity_theme, music_summary=None):
     session = SessionLocal()
     entry = MoodJournal(
         mood_text=mood_text,
         story_theme=story_theme,
-        activity_theme=activity_theme
+        activity_theme=activity_theme,
+        music_summary=music_summary
     )
     session.add(entry)
     session.commit()
@@ -40,4 +42,3 @@ def fetch_entries(limit=10):
     )
     session.close()
     return rows
-
