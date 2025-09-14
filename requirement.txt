@@ -2,6 +2,8 @@ streamlit
 langchain
 boto3
 python-dotenv
-spotipy
+sqlite3
 sqlite-utils
 langchain-community
+langchain-aws
+sqlalchemy
