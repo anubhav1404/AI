@@ -4,79 +4,88 @@ from chains import overall_chain
 from music import get_music_recommendation
 
 st.set_page_config(page_title="MoodAI", layout="wide")
-
 st.title("🎭 MoodAI - Your Personal Mood Storyteller")
 
-# --- Main Input ---
-mood = st.text_input("How are you feeling today?", "")
+# --- Inputs ---
+mood = st.text_input("💭 How are you feeling today?", "")
 
-if st.button("Generate Story, Activity & Music"):
-    if mood:
+language = st.selectbox(
+    "🎶 Choose music language",
+    ["Any", "English", "Hindi", "Punjabi", "Spanish", "K-Pop"],
+    index=0
+)
+
+if st.button("✨ Generate Story, Activity & Music"):
+    if not mood:
+        st.warning("Please enter your mood.")
+    else:
+        # Call LangChain/Bedrock chain
         results = overall_chain.invoke({"mood": mood})
 
-        # Show full story and activity
-        st.subheader("📖 Your Story")
-        st.write(results["story"])
-        st.subheader("🎯 Suggested Activity")
-        st.write(results["activity"])
+        # Show story + activity
+        col1, col2 = st.columns([3, 2])
+        with col1:
+            st.subheader("📖 Your Story")
+            st.markdown(f"<div style='padding:10px; background:#f7f7fb; border-radius:8px;'>{results.get('story','')}</div>", unsafe_allow_html=True)
+        with col2:
+            st.subheader("🎯 Suggested Activity")
+            st.markdown(f"<div style='padding:10px; background:#f0ffef; border-radius:8px;'>{results.get('activity','')}</div>", unsafe_allow_html=True)
 
-        # 🎵 Get music recommendation
+        # Music
         st.subheader("🎶 Music Recommendation")
-        music_list = get_music_recommendation(mood)
-
-        if music_list:
-            for track in music_list:
-                st.markdown(f"🎵 **[{track['title']}]({track['url']})** by *{track['artist']}*")
-                st.write(f"👥 Listeners: {track['listeners']}")
-                if track["image"]:
-                    st.image(track["image"], width=150)
-                st.markdown("---")
+        tracks, used_tag = get_music_recommendation(mood, language=language, limit=4)
+        if used_tag:
+            st.caption(f"Results sourced from Last.fm tag: `{used_tag}`")
+        if tracks:
+            cols = st.columns(len(tracks))
+            for i, t in enumerate(tracks):
+                with cols[i]:
+                    st.image(t["image"], width=150)
+                    st.markdown(f"**[{t['title']}]({t['url']})**")
+                    st.caption(f"by {t['artist']}")
+                    st.write(f"👥 Listeners: {t['listeners']}")
         else:
-            st.write("No music found for this mood.")
+            st.info("No music found for this mood + language combination. Showing other suggestions may help.")
 
-        # Extract short themes
-        story_theme = results["story"].split(".")[0]
-        activity_theme = results["activity"].split(",")[0]
+        # Save short themes to DB
+        story_theme = results.get("story", "").split(".")[0].strip() if results.get("story") else ""
+        activity_theme = results.get("activity", "").split(",")[0].strip() if results.get("activity") else ""
+        # Save first track as music_summary if present
+        music_summary = None
+        if tracks:
+            music_summary = f"{tracks[0]['title']} - {tracks[0]['artist']}"
+        insert_entry(mood, story_theme, activity_theme, music_summary)
 
-        # Save themes to DB
-        insert_entry(mood, story_theme.strip(), activity_theme.strip())
-    else:
-        st.warning("Please enter your mood.")
-
-# --- Sidebar: Mood History ---
+# Sidebar history with clickable re-generate buttons
 st.sidebar.title("📜 Mood History")
-
-# Controls
 with st.sidebar.expander("⚙️ History Options", expanded=True):
-    search_mood = st.text_input("🔍 Search by Mood", "")
+    search_mood = st.text_input("🔍 Search by mood (sidebar)", "")
     limit = st.slider("Number of records", min_value=5, max_value=50, value=10, step=5)
 
-# Fetch entries
 entries = fetch_entries(limit=limit)
-
 if entries:
-    st.sidebar.write("Click on a past mood to revisit it:")
-    for entry in entries:
-        if search_mood.lower() in entry.mood_text.lower():
-            if st.sidebar.button(f"{entry.date_time.strftime('%Y-%m-%d %H:%M')} | {entry.mood_text}"):
-                # Re-generate full details for this past mood
-                results = overall_chain.invoke({"mood": entry.mood_text})
-
-                st.subheader("📖 Revisited Story")
-                st.write(results["story"])
-                st.subheader("🎯 Revisited Activity")
-                st.write(results["activity"])
-
-                st.subheader("🎶 Music Recommendation (Revisited)")
-                music_list = get_music_recommendation(entry.mood_text)
-                if music_list:
-                    for track in music_list:
-                        st.markdown(f"🎵 **[{track['title']}]({track['url']})** by *{track['artist']}*")
-                        st.write(f"👥 Listeners: {track['listeners']}")
-                        if track["image"]:
-                            st.image(track["image"], width=150)
-                        st.markdown("---")
-                else:
-                    st.write("No music found for this mood.")
+    st.sidebar.write("Click an entry to revisit:")
+    for idx, e in enumerate(entries):
+        if search_mood.strip().lower() and search_mood.strip().lower() not in e.mood_text.lower():
+            continue
+        if st.sidebar.button(f"{e.date_time.strftime('%Y-%m-%d %H:%M')} | {e.mood_text}", key=f"hist_{idx}"):
+            # re-generate for this mood (using selected language from main page)
+            results = overall_chain.invoke({"mood": e.mood_text})
+            st.subheader("📖 Revisited Story")
+            st.write(results.get("story",""))
+            st.subheader("🎯 Revisited Activity")
+            st.write(results.get("activity",""))
+            st.subheader("🎶 Revisited Music")
+            tracks, used_tag = get_music_recommendation(e.mood_text, language=language, limit=4)
+            if used_tag:
+                st.caption(f"Results sourced from Last.fm tag: `{used_tag}`")
+            if tracks:
+                for t in tracks:
+                    st.markdown(f"**[{t['title']}]({t['url']})** by *{t['artist']}*")
+                    st.write(f"👥 Listeners: {t['listeners']}")
+                    st.image(t["image"], width=120)
+                    st.markdown("---")
+            else:
+                st.write("No music found for this mood.")
 else:
     st.sidebar.info("No mood history yet.")
