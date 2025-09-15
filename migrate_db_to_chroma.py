@@ -1,22 +1,56 @@
-# migrate_db_to_chroma.py
-from database import fetch_entries, SessionLocal
-from vectorstore import init_vectorstore, add_mood_doc
-from sqlalchemy import select
-from database import MoodJournal, engine
+# migrate_sqlite_to_postgres.py
+import os
+import sqlite3
+from sqlalchemy import create_engine, text
+from dotenv import load_dotenv
 
-def backfill_all():
-    vectordb = init_vectorstore()
-    session = SessionLocal()
-    try:
-        rows = session.query(MoodJournal).order_by(MoodJournal.mood_id.asc()).all()
-        for r in rows:
-            uid = f"mood_{r.mood_id}"
-            date_str = r.date_time.strftime("%Y-%m-%d %H:%M:%S")
-            # avoid duplicates: Chroma will overwrite if same id exists
-            add_mood_doc(vectordb, r.mood_text, r.story_theme, r.activity_theme, date_str, uid)
-        print("Backfill completed.")
-    finally:
-        session.close()
+load_dotenv()
 
-if __name__ == "__main__":
-    backfill_all()
+SQLITE_FILE = os.path.join(os.getcwd(), "moodai.db")
+DATABASE_URL = os.getenv("DATABASE_URL")  # must be set to Postgres connection
+
+if not DATABASE_URL:
+    raise RuntimeError("Please set DATABASE_URL in environment (postgres connection string).")
+
+# read from sqlite
+if not os.path.exists(SQLITE_FILE):
+    raise RuntimeError(f"SQLite file not found at {SQLITE_FILE}")
+
+conn = sqlite3.connect(SQLITE_FILE)
+cur = conn.cursor()
+
+# fetch rows
+cur.execute("""
+    SELECT mood_id, date_time, mood_text, story_theme, activity_theme, music_summary
+    FROM mood_journal
+    ORDER BY mood_id ASC
+""")
+rows = cur.fetchall()
+print(f"Found {len(rows)} rows in sqlite.")
+
+# connect to postgres via SQLAlchemy engine
+pg_engine = create_engine(DATABASE_URL)
+with pg_engine.begin() as conn_pg:
+    # ensure table exists (will create via SQLAlchemy if not)
+    # The application (app container) should have created tables via Base.metadata.create_all,
+    # but we can double-check/ensure here by creating the table using the same schema if needed.
+
+    insert_sql = text("""
+        INSERT INTO mood_journal (date_time, mood_text, story_theme, activity_theme, music_summary)
+        VALUES (:date_time, :mood_text, :story_theme, :activity_theme, :music_summary)
+    """)
+    count = 0
+    for r in rows:
+        _, date_time, mood_text, story_theme, activity_theme, music_summary = r
+        # date_time in sqlite may be string; Postgres will accept common formats
+        conn_pg.execute(insert_sql, {
+            "date_time": date_time,
+            "mood_text": mood_text,
+            "story_theme": story_theme,
+            "activity_theme": activity_theme,
+            "music_summary": music_summary
+        })
+        count += 1
+    print(f"Inserted {count} rows into Postgres.")
+
+conn.close()

@@ -1,0 +1,35 @@
+version: "3.8"
+services:
+  db:
+    image: postgres:15
+    container_name: moodai_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: moodai_user
+      POSTGRES_PASSWORD: moodai_pass
+      POSTGRES_DB: moodai_db
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  app:
+    build: .
+    container_name: moodai_app
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      # app will read DATABASE_URL; set it to use the db service name
+      DATABASE_URL: postgresql+psycopg2://moodai_user:moodai_pass@db:5432/moodai_db
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+      LASTFM_API_KEY: ${LASTFM_API_KEY}
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app
+
+volumes:
+  db_data:
