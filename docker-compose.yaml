@@ -20,16 +20,21 @@ services:
     depends_on:
       - db
     environment:
-      # app will read DATABASE_URL; set it to use the db service name
+      # Postgres DB
       DATABASE_URL: postgresql+psycopg2://moodai_user:moodai_pass@db:5432/moodai_db
+
+      # AWS + Last.fm
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
       LASTFM_API_KEY: ${LASTFM_API_KEY}
+
     ports:
       - "8501:8501"
     volumes:
       - .:/app
+      - chroma_data:/app/chroma_db   # <--- persist ChromaDB here
 
 volumes:
   db_data:
+  chroma_data:
