@@ -35,4 +35,3 @@ overall_chain = SequentialChain(
     output_variables=["story", "activity"],  # what you want as output
     verbose=True
 )
-

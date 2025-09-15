@@ -7,3 +7,6 @@ sqlite-utils
 langchain-community
 langchain-aws
 sqlalchemy
+chromadb
+sentence-transformers
+transformers

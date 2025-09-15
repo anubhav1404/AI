@@ -2,3 +2,4 @@
 __pycache__
 venv
 moodai.db
+chroma_db
