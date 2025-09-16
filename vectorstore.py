@@ -42,7 +42,8 @@ def add_mood_doc(vectordb: Chroma, mood_text: str, story_theme: str, activity_th
 def query_similar(vectordb: Chroma, query: str, k: int = 3):
     """
     Return a list of Document objects (page_content + metadata).
+    Uses Maximal Marginal Relevance (MMR) to ensure diversity.
     """
-    retriever = vectordb.as_retriever(search_kwargs={"k": k})
+    retriever = vectordb.as_retriever(search_type="mmr", search_kwargs={"k": k, "fetch_k": 10})
     return retriever.invoke(query)
 
