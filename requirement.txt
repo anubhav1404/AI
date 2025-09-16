@@ -9,3 +9,5 @@ chromadb
 sentence-transformers
 transformers
 psycopg2-binary
+langchain-chroma
+langchain-huggingface
