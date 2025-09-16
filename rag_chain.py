@@ -44,7 +44,7 @@ class RAGGenerator:
         Retrieve similar past moods from Chroma, format context, call LLM, parse JSON.
         Returns: (result_dict_or_text, retrieved_metadata_list)
         """
-        docs = self.vectormanager.query_similar(mood, k=k)
+        docs = self.vectormanager.query_similar(mood, k=k, strict=True)
         context = (
             "\n\n".join([f"{d.metadata.get('date_time')}: {d.page_content}" for d in docs])
             if docs else "No past moods available."
