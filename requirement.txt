@@ -2,8 +2,12 @@ streamlit
 langchain
 boto3
 python-dotenv
-sqlite3
-sqlite-utils
 langchain-community
 langchain-aws
 sqlalchemy
+chromadb
+sentence-transformers
+transformers
+psycopg2-binary
+langchain-chroma
+langchain-huggingface

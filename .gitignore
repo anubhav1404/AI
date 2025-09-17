@@ -1,4 +1,35 @@
+# Python cache & build
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Virtual environment
+venv/
 .env
-__pycache__
-venv
-moodai.db
+
+# SQLite / ChromaDB local data
+*.db
+chroma_db/
+
+# AWS & API Keys
+.env
+*.pem
+
+# Docker
+*.log
+.dockerignore
+
+# VSCode / IDE configs
+.vscode/
+.idea/
+*.swp
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
