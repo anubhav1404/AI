@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: moodai-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: moodai-app
+  template:
+    metadata:
+      labels:
+        app: moodai-app
+    spec:
+      containers:
+      - name: moodai
+        image: anubhav1404/langchain-with-class:v1
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8501
+        env:
+        - name: DATABASE_URL
+          value: "postgresql+psycopg2://moodai_user:moodai_pass@moodai-db:5432/moodai_db"
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: moodai-secrets
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: moodai-secrets
+              key: POSTGRES_PASSWORD
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: moodai-secrets
+              key: AWS_ACCESS_KEY_ID
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: moodai-secrets
+              key: AWS_SECRET_ACCESS_KEY
+        - name: LASTFM_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: moodai-secrets
+              key: LASTFM_API_KEY
+        - name: AWS_DEFAULT_REGION
+          valueFrom:
+            configMapKeyRef:
+              name: moodai-config
+              key: AWS_DEFAULT_REGION
+        - name: BEDROCK_MODEL_ID
+          valueFrom:
+            configMapKeyRef:
+              name: moodai-config
+              key: BEDROCK_MODEL_ID
+        volumeMounts:
+        - mountPath: /app/chroma_db
+          name: chroma-storage
+      volumes:
+      - name: chroma-storage
+        persistentVolumeClaim:
+          claimName: chroma-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: moodai-service
+spec:
+  type: NodePort   # or LoadBalancer if you have LB in your environment
+  selector:
+    app: moodai-app
+  ports:
+    - port: 80
+      targetPort: 8501
+      nodePort: 30080
+
