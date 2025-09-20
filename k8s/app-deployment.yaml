@@ -12,6 +12,7 @@ spec:
       labels:
         app: moodai-app
     spec:
+      serviceAccountName: moodai-sa
       containers:
       - name: moodai
         image: anubhav1404/langchain-with-class:v1
